@@ -74,6 +74,14 @@
 - Changed: Removed the top-right animation and replaced SVG marker-based point loads with explicit vertical line-and-triangle shapes for a reliably centered downward or upward arrow.
 - Result: Worked.
 
+- Asked: Review four beam scenarios and verify which supplied hand-check answers match.
+- Changed: No app or spec code changed; provided a review-only comparison of the scenarios.
+- Result: Verification completed below.
+
+- Asked: Adjust the website so Case 2 is unambiguously treated as a 10 kip point load at 5 ft.
+- Changed: Preparing the app updates for the exact 10 kip/5 ft point-load case.
+- Result: Commit requested before implementation.
+
 - Asked: Commit the completed Stage 3 implementation.
 - Changed: No project files changed; prepared the Stage 3 reactions, diagrams, and arrow correction for a Git commit.
 - Result: Worked.
