@@ -53,3 +53,11 @@
 - Asked: Commit the completed Stage 1 mockup.
 - Changed: No project files changed; prepared the existing mockup and specification updates for a Git commit.
 - Result: Worked.
+
+- Asked: Build Stage 2 interactive inputs and validation only, with calculations kept separate from drawing code.
+- Changed: Added live span/load/section validation, dynamic point-load and uniform-load rows, point-load direction controls, exact W-shape and lumber property updates, invalid-field feedback, and separate `BeamCalculations` and `BeamDrawing` JavaScript objects in `index.html`.
+- Result: Worked.
+
+- Asked: Commit the Stage 2 changes.
+- Changed: No project files changed; prepared the existing Stage 2 implementation for a Git commit.
+- Result: Worked.

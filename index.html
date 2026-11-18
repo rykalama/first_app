@@ -155,6 +155,28 @@
       padding: 7px 9px;
     }
 
+    input.invalid,
+    select.invalid {
+      border-color: #b42318;
+      background: #fff8f7;
+    }
+
+    .validation-message {
+      display: none;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #f0b8b0;
+      border-radius: 5px;
+      background: #fff3f1;
+      color: #8f2017;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .validation-message.visible {
+      display: block;
+    }
+
     .with-unit {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 52px;
@@ -421,6 +443,7 @@
                 <span class="unit">ft</span>
               </div>
             </div>
+            <div id="validation-message" class="validation-message" role="alert" aria-live="polite"></div>
           </fieldset>
 
           <fieldset class="input-section">
@@ -665,10 +688,158 @@
   </main>
 
   <script>
+    const BeamCalculations = {
+      getNumber(input) {
+        if (input.value.trim() === "") return null;
+        const value = Number(input.value);
+        return Number.isFinite(value) ? value : null;
+      },
+
+      validateRange(input, min, max, label) {
+        const value = this.getNumber(input);
+        if (value === null) return `${label} is required.`;
+        if (value < min || value > max) return `${label} must be from ${min} to ${max}.`;
+        return "";
+      },
+
+      validateSpan() {
+        return this.validateRange(document.getElementById("span"), 1, 200, "Span");
+      },
+
+      validatePointLoads() {
+        const errors = [];
+        document.querySelectorAll("#point-loads .load-row").forEach((row, index) => {
+          const magnitude = row.querySelector('[aria-label="Point load magnitude"]');
+          const location = row.querySelector('[aria-label="Point load location"]');
+          const span = this.getNumber(document.getElementById("span"));
+
+          const magnitudeError = this.validateRange(magnitude, 0, 100, `Point load ${index + 1} magnitude`);
+          if (magnitudeError) errors.push(magnitudeError);
+          if (span !== null) {
+            const locationError = this.validateRange(location, 0, span, `Point load ${index + 1} location`);
+            if (locationError) errors.push(locationError);
+          }
+        });
+        return errors;
+      },
+
+      validateUniformLoads() {
+        const errors = [];
+        document.querySelectorAll("#uniform-loads .load-row").forEach((row, index) => {
+          const magnitude = row.querySelector('[aria-label="Uniform load magnitude"]');
+          const start = row.querySelector('[aria-label="Uniform load start"]');
+          const end = row.querySelector('[aria-label="Uniform load end"]');
+          const span = this.getNumber(document.getElementById("span"));
+
+          const magnitudeError = this.validateRange(magnitude, 0, 10, `Uniform load ${index + 1} magnitude`);
+          if (magnitudeError) errors.push(magnitudeError);
+          if (span !== null) {
+            const startError = this.validateRange(start, 0, span, `Uniform load ${index + 1} start`);
+            const endError = this.validateRange(end, 0, span, `Uniform load ${index + 1} end`);
+            if (startError) errors.push(startError);
+            if (endError) errors.push(endError);
+
+            const startValue = this.getNumber(start);
+            const endValue = this.getNumber(end);
+            if (startValue !== null && endValue !== null && startValue > endValue) {
+              errors.push(`Uniform load ${index + 1} start must be less than or equal to end.`);
+              start.classList.add("invalid");
+              end.classList.add("invalid");
+            }
+          }
+        });
+        return errors;
+      },
+
+      validateInputs() {
+        document.querySelectorAll(".invalid").forEach((input) => input.classList.remove("invalid"));
+        const errors = [];
+        const spanError = this.validateSpan();
+        if (spanError) errors.push(spanError);
+
+        document.querySelectorAll('input[type="number"]').forEach((input) => {
+          if (input.value.trim() === "" || input.validity.rangeUnderflow || input.validity.rangeOverflow) {
+            input.classList.add("invalid");
+          }
+        });
+
+        errors.push(...this.validatePointLoads());
+        errors.push(...this.validateUniformLoads());
+        return [...new Set(errors)];
+      }
+    };
+
+    const BeamDrawing = {
+      updateLoadLocations(span) {
+        document.querySelectorAll('[aria-label="Point load location"], [aria-label="Uniform load start"], [aria-label="Uniform load end"]').forEach((input) => {
+          input.max = String(span);
+        });
+      },
+
+      renderValidation(errors) {
+        const message = document.getElementById("validation-message");
+        if (errors.length === 0) {
+          message.textContent = "";
+          message.classList.remove("visible");
+          return;
+        }
+        message.textContent = errors.join(" ");
+        message.classList.add("visible");
+      },
+
+      updateSectionProperties() {
+        const isSteel = document.querySelector('input[name="material"]:checked').value === "steel";
+        const properties = document.getElementById("steel-properties");
+
+        if (isSteel) {
+          const steelShapes = {
+            "W8x10": [30.8, 7.81, 10],
+            "W10x12": [53.8, 10.9, 12],
+            "W12x26": [204, 33.4, 26],
+            "W14x22": [199, 29.0, 22],
+            "W16x26": [301, 38.4, 26],
+            "W18x35": [510, 57.6, 35],
+            "W21x44": [843, 81.6, 44],
+            "W24x55": [1350, 114, 55]
+          };
+          const shape = document.getElementById("steel-shape").value;
+          const [ix, sx, weight] = steelShapes[shape];
+          properties.innerHTML =
+            `<div>Ix<strong>${ix.toFixed(ix >= 100 ? 1 : 1)} in⁴</strong></div>` +
+            `<div>Sx<strong>${sx.toFixed(2)} in³</strong></div>` +
+            `<div>Weight<strong>${weight} lb/ft</strong></div>` +
+            `<div>E / Fb<strong>29,000 ksi / 30 ksi</strong></div>`;
+          return;
+        }
+
+        const lumberSizes = {
+          "2x8": [47.63, 13.14],
+          "2x10": [98.93, 21.39],
+          "2x12": [177.98, 31.64]
+        };
+        const size = document.getElementById("lumber-size").value;
+        const [ix, sx] = lumberSizes[size];
+        properties.innerHTML =
+          `<div>Ix<strong>${ix.toFixed(2)} in⁴</strong></div>` +
+          `<div>Sx<strong>${sx.toFixed(2)} in³</strong></div>` +
+          `<div>Weight<strong>Not applicable</strong></div>` +
+          `<div>E / Fb<strong>1,600 ksi / 0.900 ksi</strong></div>`;
+      }
+    };
+
     const pointLoads = document.getElementById("point-loads");
     const uniformLoads = document.getElementById("uniform-loads");
 
-    document.getElementById("add-point").addEventListener("click", () => {
+    function refreshInterface() {
+      const spanInput = document.getElementById("span");
+      const span = BeamCalculations.getNumber(spanInput);
+      if (span !== null) BeamDrawing.updateLoadLocations(span);
+      BeamDrawing.updateSectionProperties();
+      const errors = BeamCalculations.validateInputs();
+      BeamDrawing.renderValidation(errors);
+    }
+
+    function createPointLoadRow() {
       const row = document.createElement("div");
       row.className = "load-row";
       row.innerHTML = `
@@ -680,9 +851,10 @@
         </select>
         <button type="button" class="icon-button" aria-label="Remove point load">−</button>`;
       pointLoads.appendChild(row);
-    });
+      refreshInterface();
+    }
 
-    document.getElementById("add-uniform").addEventListener("click", () => {
+    function createUniformLoadRow() {
       const row = document.createElement("div");
       row.className = "load-row uniform";
       row.innerHTML = `
@@ -691,28 +863,39 @@
         <input type="number" value="20" min="0" max="20" step="0.1" aria-label="Uniform load end" title="End in ft">
         <button type="button" class="icon-button" aria-label="Remove uniform load">−</button>`;
       uniformLoads.appendChild(row);
-    });
+      refreshInterface();
+    }
+
+    document.getElementById("add-point").addEventListener("click", createPointLoadRow);
+    document.getElementById("add-uniform").addEventListener("click", createUniformLoadRow);
 
     document.addEventListener("click", (event) => {
       if (event.target.classList.contains("icon-button")) {
         event.target.closest(".load-row").remove();
+        refreshInterface();
       }
     });
 
     const steelFields = document.getElementById("steel-fields");
     const lumberFields = document.getElementById("lumber-fields");
-    const properties = document.getElementById("steel-properties");
 
     document.querySelectorAll('input[name="material"]').forEach((radio) => {
       radio.addEventListener("change", () => {
         const isSteel = radio.value === "steel" && radio.checked;
         steelFields.hidden = !isSteel;
         lumberFields.hidden = isSteel;
-        properties.innerHTML = isSteel
-          ? `<div>Ix<strong>204.0 in⁴</strong></div><div>Sx<strong>33.40 in³</strong></div><div>Weight<strong>26 lb/ft</strong></div><div>E / Fb<strong>29,000 ksi / 30 ksi</strong></div>`
-          : `<div>Ix<strong>177.98 in⁴</strong></div><div>Sx<strong>31.64 in³</strong></div><div>Weight<strong>Not applicable</strong></div><div>E / Fb<strong>1,600 ksi / 0.900 ksi</strong></div>`;
+        refreshInterface();
       });
     });
+
+    document.addEventListener("input", (event) => {
+      if (event.target.matches('input, select')) refreshInterface();
+    });
+    document.addEventListener("change", (event) => {
+      if (event.target.matches('input, select')) refreshInterface();
+    });
+
+    refreshInterface();
   </script>
 </body>
 </html>
