@@ -429,8 +429,8 @@
           <fieldset class="input-section">
             <legend>Beam configuration</legend>
             <div class="segmented">
-              <label><input type="radio" name="support" checked><span>Simply supported</span></label>
-              <label><input type="radio" name="support"><span>Cantilever</span></label>
+              <label><input type="radio" name="support" value="simple" checked><span>Simply supported</span></label>
+              <label><input type="radio" name="support" value="cantilever"><span>Cantilever</span></label>
             </div>
           </fieldset>
 
@@ -448,17 +448,7 @@
 
           <fieldset class="input-section">
             <legend>Point loads</legend>
-            <div id="point-loads">
-              <div class="load-row">
-                <input type="number" value="5" min="0" max="100" step="0.1" aria-label="Point load magnitude" title="Magnitude in kip">
-                <input type="number" value="10" min="0" max="20" step="0.1" aria-label="Point load location" title="Location in ft">
-                <select aria-label="Point load direction" title="Point load direction">
-                  <option selected>Down</option>
-                  <option>Up</option>
-                </select>
-                <button type="button" class="icon-button" aria-label="Remove point load">−</button>
-              </div>
-            </div>
+            <div id="point-loads"></div>
             <button type="button" class="add-button" id="add-point">+ Add point load</button>
           </fieldset>
 
@@ -528,10 +518,13 @@
             <h2>Beam and Loads</h2>
           </div>
           <div class="plot beam-drawing">
-            <svg viewBox="0 0 900 210" role="img" aria-label="Mock beam with support and loads">
+            <svg id="beam-svg" viewBox="0 0 900 210" role="img" aria-label="Beam with support and loads">
               <defs>
-                <marker id="arrow-down" markerWidth="8" markerHeight="8" refX="4" refY="1" orient="auto" markerUnits="strokeWidth">
-                  <path d="M0,0 L4,7 L8,0 Z" fill="#2877b8"/>
+                <marker id="arrow-down" markerWidth="12" markerHeight="12" refX="6" refY="12" orient="auto" markerUnits="userSpaceOnUse">
+                  <path d="M0,0 L6,12 L12,0 Z" fill="#2877b8"/>
+                </marker>
+                <marker id="arrow-up" markerWidth="12" markerHeight="12" refX="6" refY="0" orient="auto" markerUnits="userSpaceOnUse">
+                  <path d="M0,12 L6,0 L12,12 Z" fill="#2877b8"/>
                 </marker>
               </defs>
               <line x1="90" y1="95" x2="810" y2="95" stroke="#182534" stroke-width="12"/>
@@ -559,14 +552,14 @@
         <article class="card">
           <div class="card-header">
             <h2>Results Summary</h2>
-            <span style="font-size:12px;color:#667789">Placeholder values</span>
+            <span style="font-size:12px;color:#667789">Live calculations</span>
           </div>
           <div class="card-body">
             <div class="summary-grid">
-              <div class="metric"><span>RA</span><strong>10.00 kip</strong></div>
-              <div class="metric"><span>RB</span><strong>15.00 kip</strong></div>
-              <div class="metric"><span>Maximum shear</span><strong>−15.00 kip</strong><small> at 0.00 ft</small></div>
-              <div class="metric"><span>Maximum moment</span><strong>50.00 kip-ft</strong><small> at 10.00 ft</small></div>
+              <div class="metric"><span id="ra-label">RA</span><strong id="ra-value">10.00 kip</strong></div>
+              <div class="metric"><span id="rb-label">RB</span><strong id="rb-value">10.00 kip</strong></div>
+              <div class="metric"><span>Maximum shear</span><strong id="vmax-value">10.00 kip</strong><small id="vmax-location"> at 0.00 ft</small></div>
+              <div class="metric"><span>Maximum moment</span><strong id="mmax-value">50.00 kip-ft</strong><small id="mmax-location"> at 10.00 ft</small></div>
               <div class="metric"><span>Maximum deflection</span><strong>0.61 in</strong><small> at 10.00 ft</small></div>
               <div class="metric"><span>Deflection limit</span><strong>0.67 in</strong><small> L/360</small></div>
               <div class="metric"><span>Bending stress</span><strong>17.96 ksi</strong></div>
@@ -579,7 +572,7 @@
           <article class="card plot-card">
             <div class="card-header"><h2>Shear Diagram</h2></div>
             <div class="plot">
-              <svg viewBox="0 0 480 210" role="img" aria-label="Placeholder shear diagram">
+              <svg id="shear-svg" viewBox="0 0 480 210" role="img" aria-label="Shear diagram">
                 <g stroke="#d9e2ea" stroke-width="1">
                   <line x1="55" y1="20" x2="55" y2="170"/>
                   <line x1="55" y1="95" x2="445" y2="95"/>
@@ -606,7 +599,7 @@
           <article class="card plot-card">
             <div class="card-header"><h2>Moment Diagram</h2></div>
             <div class="plot">
-              <svg viewBox="0 0 480 210" role="img" aria-label="Placeholder moment diagram">
+              <svg id="moment-svg" viewBox="0 0 480 210" role="img" aria-label="Moment diagram">
                 <g stroke="#d9e2ea" stroke-width="1">
                   <line x1="55" y1="20" x2="55" y2="170"/>
                   <line x1="55" y1="95" x2="445" y2="95"/>
@@ -695,6 +688,127 @@
         return Number.isFinite(value) ? value : null;
       },
 
+      collectLoads() {
+        const pointLoads = [];
+        document.querySelectorAll("#point-loads .load-row").forEach((row) => {
+          const magnitude = this.getNumber(row.querySelector('[aria-label="Point load magnitude"]'));
+          const location = this.getNumber(row.querySelector('[aria-label="Point load location"]'));
+          const direction = row.querySelector('[aria-label="Point load direction"]').value;
+          if (magnitude !== null && location !== null && magnitude !== 0) {
+            pointLoads.push({
+              magnitude,
+              location,
+              signedMagnitude: direction === "Down" ? magnitude : -magnitude
+            });
+          }
+        });
+
+        const uniformLoads = [];
+        document.querySelectorAll("#uniform-loads .load-row").forEach((row) => {
+          const magnitude = this.getNumber(row.querySelector('[aria-label="Uniform load magnitude"]'));
+          const start = this.getNumber(row.querySelector('[aria-label="Uniform load start"]'));
+          const end = this.getNumber(row.querySelector('[aria-label="Uniform load end"]'));
+          if (magnitude !== null && start !== null && end !== null && magnitude !== 0) {
+            uniformLoads.push({ magnitude, start, end });
+          }
+        });
+        return { pointLoads, uniformLoads };
+      },
+
+      calculate() {
+        const span = this.getNumber(document.getElementById("span"));
+        if (span === null) return null;
+
+        const support = document.querySelector('input[name="support"]:checked').value;
+        const { pointLoads, uniformLoads } = this.collectLoads();
+        let totalLoad = 0;
+        let totalMoment = 0;
+
+        pointLoads.forEach((load) => {
+          totalLoad += load.signedMagnitude;
+          totalMoment += load.signedMagnitude * load.location;
+        });
+        uniformLoads.forEach((load) => {
+          const length = load.end - load.start;
+          const magnitude = load.magnitude;
+          const resultant = magnitude * length;
+          const centroid = (load.start + load.end) / 2;
+          totalLoad += resultant;
+          totalMoment += resultant * centroid;
+        });
+
+        let RA = 0;
+        let RB = 0;
+        let fixedMoment = 0;
+
+        if (support === "simple") {
+          RB = totalMoment / span;
+          RA = totalLoad - RB;
+        } else {
+          RA = totalLoad;
+          fixedMoment = totalMoment;
+        }
+
+        const shearAt = (x) => {
+          let shear = support === "simple" ? RA : RA;
+          pointLoads.forEach((load) => {
+            if (load.location < x) shear -= load.signedMagnitude;
+          });
+          uniformLoads.forEach((load) => {
+            if (x > load.start) {
+              const coveredLength = Math.min(x, load.end) - load.start;
+              if (coveredLength > 0) shear -= load.magnitude * coveredLength;
+            }
+          });
+          return shear;
+        };
+
+        const momentAt = (x) => {
+          let moment = support === "simple" ? RA * x : fixedMoment;
+          pointLoads.forEach((load) => {
+            if (x > load.location) {
+              moment -= load.signedMagnitude * (x - load.location);
+            }
+          });
+          uniformLoads.forEach((load) => {
+            if (x > load.start) {
+              const coveredLength = Math.min(x, load.end) - load.start;
+              const centroid = load.start + coveredLength / 2;
+              if (coveredLength > 0) moment -= load.magnitude * coveredLength * (x - centroid);
+            }
+          });
+          return moment;
+        };
+
+        const samples = [];
+        for (let i = 0; i <= 200; i++) {
+          const x = span * i / 200;
+          samples.push({ x, shear: shearAt(x), moment: momentAt(x) });
+        }
+
+        const vmaxSample = samples.reduce((best, sample) =>
+          Math.abs(sample.shear) > Math.abs(best.shear) ? sample : best
+        );
+        const mmaxSample = samples.reduce((best, sample) =>
+          Math.abs(sample.moment) > Math.abs(best.moment) ? sample : best
+        );
+
+        return {
+          span,
+          support,
+          pointLoads,
+          uniformLoads,
+          RA,
+          RB,
+          fixedMoment,
+          samples,
+          vmax: Math.abs(vmaxSample.shear),
+          vmaxLocation: vmaxSample.x,
+          mmax: Math.abs(mmaxSample.moment),
+          mmaxLocation: mmaxSample.x
+        };
+      },
+
       validateRange(input, min, max, label) {
         const value = this.getNumber(input);
         if (value === null) return `${label} is required.`;
@@ -770,6 +884,139 @@
     };
 
     const BeamDrawing = {
+      format(value, decimals = 2) {
+        return value.toFixed(decimals);
+      },
+
+      drawBeam(result) {
+        const svg = document.getElementById("beam-svg");
+        const left = 90;
+        const right = 810;
+        const y = 95;
+        const span = result.span;
+        let supports = "";
+
+        if (result.support === "simple") {
+          supports = `
+            <path d="M90 101 L70 140 L110 140 Z" fill="#dbe5ec" stroke="#002e5d" stroke-width="3"/>
+            <path d="M810 101 L790 140 L830 140 Z" fill="#dbe5ec" stroke="#002e5d" stroke-width="3"/>
+            <circle cx="90" cy="101" r="7" fill="#002e5d"/>
+            <circle cx="810" cy="101" r="7" fill="#002e5d"/>
+            <text x="90" y="165" text-anchor="middle" font-size="16" fill="#182534">RA ${this.format(result.RA)} kip</text>
+            <text x="810" y="165" text-anchor="middle" font-size="16" fill="#182534">RB ${this.format(result.RB)} kip</text>`;
+        } else {
+          supports = `
+            <rect x="70" y="75" width="20" height="70" fill="#dbe5ec" stroke="#002e5d" stroke-width="3"/>
+            <circle cx="90" cy="95" r="7" fill="#002e5d"/>
+            <text x="90" y="165" text-anchor="middle" font-size="16" fill="#182534">RA ${this.format(result.RA)} kip</text>
+            <text x="90" y="185" text-anchor="middle" font-size="14" fill="#182534">MA ${this.format(result.fixedMoment)} kip-ft</text>`;
+        }
+
+        let uniformShapes = "";
+        result.uniformLoads.forEach((load) => {
+          const x1 = left + (right - left) * load.start / span;
+          const x2 = left + (right - left) * load.end / span;
+          uniformShapes += `
+            <rect x="${x1}" y="63" width="${Math.max(0, x2 - x1)}" height="18" fill="#2877b8" opacity="0.16"/>
+            <text x="${(x1 + x2) / 2}" y="55" text-anchor="middle" font-size="13" fill="#2877b8">${this.format(load.magnitude)} kip/ft</text>`;
+        });
+
+        let pointShapes = "";
+        result.pointLoads.forEach((load) => {
+          const x = left + (right - left) * load.location / span;
+          const isDown = load.signedMagnitude >= 0;
+          if (isDown) {
+            pointShapes += `
+              <line x1="${x}" y1="42" x2="${x}" y2="82" stroke="#2877b8" stroke-width="3"/>
+              <path d="M${x-8} 82 L${x} 95 L${x+8} 82 Z" fill="#2877b8"/>
+              <text x="${x}" y="32" text-anchor="middle" font-size="14" fill="#182534">${this.format(load.magnitude)} kip</text>`;
+          } else {
+            pointShapes += `
+              <line x1="${x}" y1="95" x2="${x}" y2="55" stroke="#2877b8" stroke-width="3"/>
+              <path d="M${x-8} 55 L${x} 42 L${x+8} 55 Z" fill="#2877b8"/>
+              <text x="${x}" y="32" text-anchor="middle" font-size="14" fill="#182534">${this.format(load.magnitude)} kip up</text>`;
+          }
+        });
+
+        svg.innerHTML = `
+          <line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#182534" stroke-width="12"/>
+          ${supports}
+          ${uniformShapes}
+          ${pointShapes}
+          <line x1="${left}" y1="184" x2="${right}" y2="184" stroke="#667789" stroke-width="1"/>
+          <path d="M${left} 178 L${left} 190 M${left + (right-left)/2} 178 L${left + (right-left)/2} 190 M${right} 178 L${right} 190" stroke="#667789" stroke-width="1"/>
+          <text x="${left}" y="204" text-anchor="middle" font-size="12" fill="#667789">0 ft</text>
+          <text x="${left + (right-left)/2}" y="204" text-anchor="middle" font-size="12" fill="#667789">${this.format(span/2)} ft</text>
+          <text x="${right}" y="204" text-anchor="middle" font-size="12" fill="#667789">${this.format(span)} ft</text>`;
+      },
+
+      drawChart(svgId, samples, valueKey, title, unit) {
+        const svg = document.getElementById(svgId);
+        const left = 55;
+        const right = 445;
+        const top = 20;
+        const bottom = 170;
+        const values = samples.map((sample) => sample[valueKey]);
+        const maxAbs = Math.max(...values.map((value) => Math.abs(value)), 1);
+        const span = samples[samples.length - 1].x;
+        const centerY = (top + bottom) / 2;
+
+        const points = samples.map((sample) => {
+          const x = left + (right-left) * sample.x / span;
+          const y = centerY - (sample[valueKey] / maxAbs) * (bottom-top) * 0.42;
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(" ");
+
+        const vmaxSample = samples.reduce((best, sample) =>
+          Math.abs(sample[valueKey]) > Math.abs(best[valueKey]) ? sample : best
+        );
+        const labelX = left + (right-left) * vmaxSample.x / span;
+        const labelY = centerY - (vmaxSample[valueKey] / maxAbs) * (bottom-top) * 0.42;
+
+        svg.innerHTML = `
+          <g stroke="#d9e2ea" stroke-width="1">
+            <line x1="${left}" y1="${top}" x2="${left}" y2="${bottom}"/>
+            <line x1="${left}" y1="${centerY}" x2="${right}" y2="${centerY}"/>
+            <line x1="${right}" y1="${top}" x2="${right}" y2="${bottom}"/>
+          </g>
+          <g stroke="#667789" stroke-width="1">
+            <line x1="${left}" y1="${bottom}" x2="${right}" y2="${bottom}"/>
+            <line x1="${left}" y1="${bottom}" x2="${left}" y2="${bottom+6}"/>
+            <line x1="${left+(right-left)/2}" y1="${bottom}" x2="${left+(right-left)/2}" y2="${bottom+6}"/>
+            <line x1="${right}" y1="${bottom}" x2="${right}" y2="${bottom+6}"/>
+          </g>
+          <polyline points="${points}" fill="none" stroke="#2877b8" stroke-width="3"/>
+          <line x1="${labelX}" y1="${centerY}" x2="${labelX}" y2="${labelY}" stroke="#2877b8" stroke-dasharray="5 5"/>
+          <circle cx="${labelX}" cy="${labelY}" r="5" fill="#2877b8"/>
+          <text x="${left}" y="${bottom+20}" text-anchor="middle" font-size="12" fill="#667789">0 ft</text>
+          <text x="${left+(right-left)/2}" y="${bottom+20}" text-anchor="middle" font-size="12" fill="#667789">${this.format(span/2)} ft</text>
+          <text x="${right}" y="${bottom+20}" text-anchor="middle" font-size="12" fill="#667789">${this.format(span)} ft</text>
+          <text x="${labelX}" y="${Math.max(15, labelY-12)}" text-anchor="middle" font-size="13" font-weight="700" fill="#182534">${title}: ${this.format(vmaxSample[valueKey])} ${unit}</text>
+          <text x="${left-12}" y="${top+5}" text-anchor="end" font-size="11" fill="#667789">${this.format(maxAbs)}</text>
+          <text x="${left-12}" y="${centerY+4}" text-anchor="end" font-size="11" fill="#667789">0</text>
+          <text x="${left-12}" y="${bottom}" text-anchor="end" font-size="11" fill="#667789">${this.format(-maxAbs)}</text>`;
+      },
+
+      updateResults(result) {
+        document.getElementById("ra-label").textContent = "RA";
+        document.getElementById("ra-value").textContent = `${this.format(result.RA)} kip`;
+
+        if (result.support === "simple") {
+          document.getElementById("rb-label").textContent = "RB";
+          document.getElementById("rb-value").textContent = `${this.format(result.RB)} kip`;
+        } else {
+          document.getElementById("rb-label").textContent = "Fixed moment";
+          document.getElementById("rb-value").textContent = `${this.format(result.fixedMoment)} kip-ft`;
+        }
+
+        document.getElementById("vmax-value").textContent = `${this.format(result.vmax)} kip`;
+        document.getElementById("vmax-location").textContent = ` at ${this.format(result.vmaxLocation)} ft`;
+        document.getElementById("mmax-value").textContent = `${this.format(result.mmax)} kip-ft`;
+        document.getElementById("mmax-location").textContent = ` at ${this.format(result.mmaxLocation)} ft`;
+
+        document.querySelector('[aria-label="Beam with support and loads"]')?.setAttribute("aria-label",
+          `${result.support === "simple" ? "Simply supported" : "Cantilever"} beam with loads`);
+      },
       updateLoadLocations(span) {
         document.querySelectorAll('[aria-label="Point load location"], [aria-label="Uniform load start"], [aria-label="Uniform load end"]').forEach((input) => {
           input.max = String(span);
@@ -837,6 +1084,16 @@
       BeamDrawing.updateSectionProperties();
       const errors = BeamCalculations.validateInputs();
       BeamDrawing.renderValidation(errors);
+
+      if (errors.length === 0) {
+        const result = BeamCalculations.calculate();
+        if (result) {
+          BeamDrawing.drawBeam(result);
+          BeamDrawing.drawChart("shear-svg", result.samples, "shear", "Vmax", "kip");
+          BeamDrawing.drawChart("moment-svg", result.samples, "moment", "Mmax", "kip-ft");
+          BeamDrawing.updateResults(result);
+        }
+      }
     }
 
     function createPointLoadRow() {

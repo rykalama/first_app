@@ -61,3 +61,19 @@
 - Asked: Commit the Stage 2 changes.
 - Changed: No project files changed; prepared the existing Stage 2 implementation for a Git commit.
 - Result: Worked.
+
+- Asked: Build Stage 3 reactions, shear, moment, and beam/shear/moment diagrams.
+- Changed: Added live support/reaction calculations, point and uniform load collection, simply supported and cantilever formulas, maximum shear/moment summaries, and dynamic beam/shear/moment SVG drawing in `index.html`. Deflection and pass/fail remain mock outputs pending Stage 4.
+- Result: Worked.
+
+- Asked: Fix the point-load arrows and add a top-right dancing GIF.
+- Changed: Replaced the point-load SVG marker with centered downward/upward markers using fixed SVG user-space sizing, and added a small animated dancing figure in the top-right masthead.
+- Result: Worked.
+
+- Asked: Remove the header image and fix the point-load arrow again.
+- Changed: Removed the top-right animation and replaced SVG marker-based point loads with explicit vertical line-and-triangle shapes for a reliably centered downward or upward arrow.
+- Result: Worked.
+
+- Asked: Commit the completed Stage 3 implementation.
+- Changed: No project files changed; prepared the Stage 3 reactions, diagrams, and arrow correction for a Git commit.
+- Result: Worked.
