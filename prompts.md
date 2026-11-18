@@ -134,6 +134,18 @@
 - Changed: No project files changed; prepared the completed dark-mode app update for a Git commit.
 - Result: Worked.
 
+- Asked: Add the institution logo selector to the app and spec.
+- Changed: Added a masthead institution panel with BYU, University of Utah, Utah State, SUU, and Weber choices; added immediate text-mark updates, localStorage persistence, responsive styling, and spec Look and feel acceptance requirements.
+- Result: Worked.
+
+- Asked: Make BYU the default institution and provide a link.
+- Changed: Changed the initial masthead mark and default dropdown option to BYU while preserving saved-selection behavior.
+- Result: Worked.
+
+- Asked: Commit the institution selector with BYU as the default.
+- Changed: No project files changed; prepared the institution selector and spec updates for a Git commit.
+- Result: Worked.
+
 - Asked: Build Stage 5 live behavior and polish.
 - Changed: Added clearing of stale beam and result outputs for invalid inputs, Waiting states for pass/fail cards, empty-plot feedback, and live recalculation cleanup in `index.html`.
 - Result: Worked.

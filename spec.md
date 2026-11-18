@@ -201,6 +201,15 @@ stress Fb = 0.900 ksi.
     and pass/fail states readable with sufficient contrast in both themes.
   - Use an accessible label such as "Switch to dark mode" or
     "Switch to light mode", and support keyboard activation and visible focus.
+- Institution logo selector:
+  - Place a compact institution panel beside the masthead logo.
+  - Default to BYU.
+  - Offer BYU, University of Utah, Utah State, SUU, and Weber.
+  - Display official-looking text marks: BYU, U, USU, SUU, or Weber.
+  - Update the masthead mark immediately when the dropdown changes.
+  - Remember the selected institution in browser local storage.
+  - Keep the selector, logo, and brand text readable at desktop and mobile sizes.
+  - Provide an accessible dropdown label and visible keyboard focus.
 
 ## Validation
 20 ft simply supported W12x26 with 1 kip/ft: M = 50.0 kip-ft,
@@ -290,6 +299,8 @@ Check:
 - The design is complete and remains usable at common desktop and mobile widths.
 - Light and dark modes switch immediately, preserve readable contrast, and
   retain the user's choice after a reload.
+- Changing the institution dropdown updates the masthead immediately and
+  retains the choice after reload.
 
 ### Stage 6: Full validation pass
 Test the supplied example plus cantilevers, multiple point loads, partial uniform
