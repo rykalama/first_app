@@ -395,6 +395,20 @@
 
     .ratio strong { color: var(--ink); }
 
+    .status.waiting {
+      border-color: var(--line);
+      background: #f5f7f9;
+    }
+
+    .status.waiting .badge {
+      background: var(--muted);
+    }
+
+    .empty-plot {
+      fill: var(--muted);
+      font-size: 13px;
+    }
+
     .beam-drawing {
       height: 210px;
     }
@@ -982,6 +996,57 @@
         return value.toFixed(decimals);
       },
 
+      clearResults() {
+        const ids = [
+          "ra-value", "rb-value", "vmax-value", "mmax-value",
+          "ymax-value", "deflection-limit-value", "bending-stress-value",
+          "allowable-stress-value"
+        ];
+        ids.forEach((id) => {
+          const element = document.getElementById(id);
+          if (element) element.textContent = "—";
+        });
+
+        [
+          "vmax-location", "mmax-location", "ymax-location"
+        ].forEach((id) => {
+          const element = document.getElementById(id);
+          if (element) element.textContent = "";
+        });
+
+        document.getElementById("rb-label").textContent = "RB";
+
+        ["bending-status", "deflection-status"].forEach((id) => {
+          const status = document.getElementById(id);
+          status.classList.add("waiting");
+          status.classList.remove("fail");
+        });
+        document.getElementById("bending-badge").textContent = "Waiting";
+        document.getElementById("deflection-badge").textContent = "Waiting";
+        document.getElementById("bending-utilization").textContent = "—";
+        document.getElementById("deflection-utilization").textContent = "—";
+        document.getElementById("bending-utilization-text").textContent = "—";
+        document.getElementById("deflection-utilization-text").textContent = "—";
+
+        ["beam-svg", "shear-svg", "moment-svg", "deflection-svg"].forEach((id) => {
+          const svg = document.getElementById(id);
+          if (!svg) return;
+          if (id === "beam-svg") {
+            svg.innerHTML = `
+              <line x1="90" y1="95" x2="810" y2="95" stroke="#ccd6df" stroke-width="12"/>
+              <text x="450" y="120" text-anchor="middle" class="empty-plot">Enter valid inputs to draw the beam</text>`;
+          } else if (id === "deflection-svg") {
+            svg.innerHTML = `
+              <line x1="55" y1="95" x2="865" y2="95" stroke="#ccd6df" stroke-width="2"/>
+              <text x="460" y="120" text-anchor="middle" class="empty-plot">Enter valid inputs to draw deflection</text>`;
+          } else {
+            svg.innerHTML = `
+              <line x1="55" y1="95" x2="445" y2="95" stroke="#ccd6df" stroke-width="2"/>
+              <text x="250" y="120" text-anchor="middle" class="empty-plot">Enter valid inputs</text>`;
+          }
+        });
+      },
+
       drawBeam(result) {
         const svg = document.getElementById("beam-svg");
         const left = 90;
@@ -1158,6 +1223,9 @@
           `${this.format(check.ymax)} / ${this.format(check.deflectionLimit)}`;
         document.getElementById("deflection-utilization").textContent =
           this.format(check.deflectionRatio);
+
+        bendingStatus.classList.remove("waiting");
+        deflectionStatus.classList.remove("waiting");
       },
 
       updateResults(result) {
@@ -1264,6 +1332,8 @@
           );
           BeamDrawing.updateSectionChecks(sectionCheck);
         }
+      } else {
+        BeamDrawing.clearResults();
       }
     }
 

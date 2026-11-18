@@ -89,3 +89,15 @@
 - Asked: Commit the Stage 4 implementation.
 - Changed: No project files changed; prepared the completed Stage 4 implementation for a Git commit.
 - Result: Worked.
+
+- Asked: Update the spec to match the final implementation changes that differed from the original spec.
+- Changed: Added explicit point-load arrow geometry and a rule that no GIF or top-right entertainment image appears in the masthead.
+- Result: Worked.
+
+- Asked: Commit the Stage 5 implementation and spec updates.
+- Changed: No project files changed; prepared the completed Stage 5 implementation and synchronized spec for a Git commit.
+- Result: Worked.
+
+- Asked: Build Stage 5 live behavior and polish.
+- Changed: Added clearing of stale beam and result outputs for invalid inputs, Waiting states for pass/fail cards, empty-plot feedback, and live recalculation cleanup in `index.html`.
+- Result: Worked.

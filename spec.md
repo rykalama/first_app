@@ -145,6 +145,11 @@ stress Fb = 0.900 ksi.
 - Beam and load drawing:
   - Show the beam span and support configuration.
   - Show every point load with its magnitude and position.
+  - Render each point load as a centered vertical arrow: downward loads use a
+    shaft ending in a downward triangle, and upward loads use a shaft ending
+    in an upward triangle.
+  - Do not use SVG markers for point-load arrows; use explicit line-and-triangle
+    geometry so the arrow remains vertically aligned with the load.
   - Show every uniform load with its magnitude and loaded interval.
   - Label the support reactions in kip.
 - Shear diagram:
@@ -177,6 +182,8 @@ stress Fb = 0.900 ksi.
 - Diagrams and answers underneath.
 - Place a BYU logo at the top of the page with "Construction Management"
   underneath it.
+- Do not place a GIF, video, animated character, or other entertainment image
+  in the masthead or at the top right of the page.
 - Use a navy-blue background for the page header and navy, white, and
   restrained neutral accents for the interface.
 - Keep the layout clean and professional, responsive, and readable on
