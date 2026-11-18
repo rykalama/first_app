@@ -204,6 +204,19 @@ deflection 0.609 in.
 - The numerical display should round M to 50.00 kip-ft and deflection
   to 0.61 in.
 
+### Stage 6 validation cases
+- 20 ft simply supported W12x26 with 1 kip/ft full-span uniform load:
+  Mmax = 50.00 kip-ft and ymax = 0.609 in.
+- 10 ft cantilever W12x26 with 1 kip/ft full-span uniform load:
+  fixed-end moment magnitude = 50.00 kip-ft and ymax = 0.365 in.
+- 20 ft simply supported W12x26 with one 5 kip downward point load at 10 ft:
+  RA = RB = 2.50 kip and Mmax = 25.00 kip-ft.
+- 20 ft simply supported 2x12 Douglas Fir-Larch lumber with 1 kip/ft:
+  Mmax = 50.00 kip-ft and ymax should be greater than the W12x26 deflection
+  because lumber has E = 1,600 ksi.
+- Partial uniform loads, upward point loads, and multiple loads must obey the
+  stated sign conventions and must update all reactions and diagrams.
+
 ## Out of scope
 - Continuous beams
 - Buckling

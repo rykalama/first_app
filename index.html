@@ -769,7 +769,7 @@
           RA = totalLoad - RB;
         } else {
           RA = totalLoad;
-          fixedMoment = totalMoment;
+          fixedMoment = -totalMoment;
         }
 
         const shearAt = (x) => {
@@ -787,19 +787,38 @@
         };
 
         const momentAt = (x) => {
-          let moment = support === "simple" ? RA * x : fixedMoment;
-          pointLoads.forEach((load) => {
-            if (x > load.location) {
-              moment -= load.signedMagnitude * (x - load.location);
-            }
-          });
-          uniformLoads.forEach((load) => {
-            if (x > load.start) {
-              const coveredLength = Math.min(x, load.end) - load.start;
-              const centroid = load.start + coveredLength / 2;
-              if (coveredLength > 0) moment -= load.magnitude * coveredLength * (x - centroid);
-            }
-          });
+          let moment = 0;
+          if (support === "simple") {
+            moment = RA * x;
+            pointLoads.forEach((load) => {
+              if (x > load.location) {
+                moment -= load.signedMagnitude * (x - load.location);
+              }
+            });
+            uniformLoads.forEach((load) => {
+              if (x > load.start) {
+                const coveredLength = Math.min(x, load.end) - load.start;
+                const centroid = load.start + coveredLength / 2;
+                if (coveredLength > 0) moment -= load.magnitude * coveredLength * (x - centroid);
+              }
+            });
+          } else {
+            pointLoads.forEach((load) => {
+              if (load.location > x) {
+                moment -= load.signedMagnitude * (load.location - x);
+              }
+            });
+            uniformLoads.forEach((load) => {
+              if (load.end > x) {
+                const rightStart = Math.max(x, load.start);
+                const length = load.end - rightStart;
+                if (length > 0) {
+                  const centroid = rightStart + length / 2;
+                  moment -= load.magnitude * length * (centroid - x);
+                }
+              }
+            });
+          }
           return moment;
         };
 
