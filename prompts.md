@@ -114,6 +114,26 @@
 - Changed: No project files changed; prepared the Stage 6 cantilever correction and validation documentation for a Git commit.
 - Result: Worked.
 
+- Asked: Add dark mode to the specification.
+- Changed: Added sun/moon theme-control, light-first and remembered-preference behavior, contrast, persistence, accessibility, responsive, and Stage 5 acceptance requirements to `spec.md`.
+- Result: Worked.
+
+- Asked: Also place the dark-mode requirements in the Look and feel section.
+- Changed: Confirmed the existing `- Dark mode:` block is already under `## Look and feel`; no spec changes were needed.
+- Result: Worked.
+
+- Asked: Acknowledge the completed dark-mode spec update.
+- Changed: Added this prompt entry only.
+- Result: Worked.
+
+- Asked: Add dark mode to the app.
+- Changed: Added a top-right sun/moon button, light-first initial theme, saved theme preference with localStorage, live theme switching, dark CSS variables, and dark-mode form/SVG/status styling in `index.html`.
+- Result: Worked.
+
+- Asked: Commit the dark-mode implementation.
+- Changed: No project files changed; prepared the completed dark-mode app update for a Git commit.
+- Result: Worked.
+
 - Asked: Build Stage 5 live behavior and polish.
 - Changed: Added clearing of stale beam and result outputs for invalid inputs, Waiting states for pass/fail cards, empty-plot feedback, and live recalculation cleanup in `index.html`.
 - Result: Worked.

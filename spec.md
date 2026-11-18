@@ -189,6 +189,18 @@ stress Fb = 0.900 ksi.
 - Keep the layout clean and professional, responsive, and readable on
   desktop and mobile widths.
 - Do not use a full-page reload or navigation for calculations.
+- Dark mode:
+  - Place a sun/moon icon button in the top-right area of the masthead.
+  - Use light mode on first use.
+  - Remember the user's selected theme in browser local storage.
+  - A saved theme choice overrides the first-use light-mode default.
+  - Switch between themes immediately without reloading the page.
+  - In dark mode, use dark page and card surfaces with light text and preserve
+    navy accents.
+  - Keep borders, gridlines, plots, SVG text, input fields, validation messages,
+    and pass/fail states readable with sufficient contrast in both themes.
+  - Use an accessible label such as "Switch to dark mode" or
+    "Switch to light mode", and support keyboard activation and visible focus.
 
 ## Validation
 20 ft simply supported W12x26 with 1 kip/ft: M = 50.0 kip-ft,
@@ -276,6 +288,8 @@ Check:
 - Invalid or incomplete inputs remove stale results and show clear feedback.
 - Valid changes update every result without refreshing.
 - The design is complete and remains usable at common desktop and mobile widths.
+- Light and dark modes switch immediately, preserve readable contrast, and
+  retain the user's choice after a reload.
 
 ### Stage 6: Full validation pass
 Test the supplied example plus cantilevers, multiple point loads, partial uniform

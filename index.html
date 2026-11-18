@@ -19,6 +19,21 @@
       --amber: #b7791f;
     }
 
+    body[data-theme="dark"] {
+      --navy: #123d70;
+      --navy-dark: #091827;
+      --blue: #70b7ee;
+      --paper: #172231;
+      --canvas: #0d1723;
+      --line: #344558;
+      --ink: #edf4fa;
+      --muted: #adbac7;
+      --green: #63c98d;
+      --green-bg: #173829;
+      --amber: #e2ad5c;
+      color-scheme: dark;
+    }
+
     * { box-sizing: border-box; }
 
     body {
@@ -42,6 +57,30 @@
       display: flex;
       align-items: center;
       gap: 16px;
+    }
+
+    .theme-toggle {
+      margin-left: auto;
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,0.55);
+      border-radius: 50%;
+      background: rgba(255,255,255,0.10);
+      color: white;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .theme-toggle:hover {
+      background: rgba(255,255,255,0.20);
+    }
+
+    .theme-toggle:focus-visible {
+      outline: 3px solid #ffd34d;
+      outline-offset: 3px;
     }
 
     .byu-mark {
@@ -413,6 +452,58 @@
       height: 210px;
     }
 
+    body[data-theme="dark"] input,
+    body[data-theme="dark"] select {
+      background: #101a26;
+      color: var(--ink);
+      border-color: #526579;
+    }
+
+    body[data-theme="dark"] .unit,
+    body[data-theme="dark"] .property-summary,
+    body[data-theme="dark"] .metric,
+    body[data-theme="dark"] .status.waiting {
+      background: #101a26;
+      color: var(--muted);
+    }
+
+    body[data-theme="dark"] .segmented span,
+    body[data-theme="dark"] .icon-button,
+    body[data-theme="dark"] .add-button {
+      background: #101a26;
+      border-color: #526579;
+      color: var(--ink);
+    }
+
+    body[data-theme="dark"] .segmented input:checked + span {
+      background: #1d3854;
+      color: #dcecff;
+      border-color: #70b7ee;
+      box-shadow: inset 0 0 0 1px #70b7ee;
+    }
+
+    body[data-theme="dark"] .validation-message {
+      background: #44211f;
+      border-color: #9f5c54;
+      color: #ffd2cc;
+    }
+
+    body[data-theme="dark"] .status.fail {
+      background: #44211f;
+      border-color: #9f5c54;
+    }
+
+    body[data-theme="dark"] .plot svg text,
+    body[data-theme="dark"] .beam-drawing svg text {
+      fill: var(--ink);
+    }
+
+    body[data-theme="dark"] .plot svg [stroke="#d9e2ea"],
+    body[data-theme="dark"] .beam-drawing svg [stroke="#667789"],
+    body[data-theme="dark"] .plot svg [stroke="#667789"] {
+      stroke: #526579;
+    }
+
     @media (max-width: 980px) {
       .workspace { grid-template-columns: 1fr; }
       .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -438,6 +529,8 @@
         <strong>Beam Designer</strong>
         <span>Construction Management</span>
       </div>
+      <button id="theme-toggle" class="theme-toggle" type="button"
+        aria-label="Switch to dark mode" title="Switch to dark mode">🌙</button>
     </div>
   </header>
 
@@ -704,6 +797,38 @@
   </main>
 
   <script>
+    const themeToggle = document.getElementById("theme-toggle");
+    const savedTheme = (() => {
+      try {
+        return localStorage.getItem("beam-designer-theme");
+      } catch {
+        return null;
+      }
+    })();
+    const initialTheme = savedTheme === "dark" ? "dark" : "light";
+
+    function applyTheme(theme) {
+      document.body.dataset.theme = theme;
+      const isDark = theme === "dark";
+      themeToggle.textContent = isDark ? "☀" : "🌙";
+      themeToggle.setAttribute("aria-label",
+        isDark ? "Switch to light mode" : "Switch to dark mode");
+      themeToggle.setAttribute("title",
+        isDark ? "Switch to light mode" : "Switch to dark mode");
+    }
+
+    applyTheme(initialTheme);
+
+    themeToggle.addEventListener("click", () => {
+      const nextTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
+      applyTheme(nextTheme);
+      try {
+        localStorage.setItem("beam-designer-theme", nextTheme);
+      } catch {
+        // The theme still works for the current page if storage is unavailable.
+      }
+    });
+
     const BeamCalculations = {
       getNumber(input) {
         if (input.value.trim() === "") return null;
