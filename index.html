@@ -359,6 +359,15 @@
       padding: 12px;
     }
 
+    .status.fail {
+      border-color: #e6aaa2;
+      background: #fdecea;
+    }
+
+    .status.fail .badge {
+      background: #b42318;
+    }
+
     .status-line {
       display: flex;
       align-items: center;
@@ -560,10 +569,10 @@
               <div class="metric"><span id="rb-label">RB</span><strong id="rb-value">10.00 kip</strong></div>
               <div class="metric"><span>Maximum shear</span><strong id="vmax-value">10.00 kip</strong><small id="vmax-location"> at 0.00 ft</small></div>
               <div class="metric"><span>Maximum moment</span><strong id="mmax-value">50.00 kip-ft</strong><small id="mmax-location"> at 10.00 ft</small></div>
-              <div class="metric"><span>Maximum deflection</span><strong>0.61 in</strong><small> at 10.00 ft</small></div>
-              <div class="metric"><span>Deflection limit</span><strong>0.67 in</strong><small> L/360</small></div>
-              <div class="metric"><span>Bending stress</span><strong>17.96 ksi</strong></div>
-              <div class="metric"><span>Allowable stress</span><strong>30.00 ksi</strong></div>
+              <div class="metric"><span>Maximum deflection</span><strong id="ymax-value">0.61 in</strong><small id="ymax-location"> at 10.00 ft</small></div>
+              <div class="metric"><span>Deflection limit</span><strong id="deflection-limit-value">0.67 in</strong><small> L/360</small></div>
+              <div class="metric"><span>Bending stress</span><strong id="bending-stress-value">17.96 ksi</strong></div>
+              <div class="metric"><span>Allowable stress</span><strong id="allowable-stress-value">30.00 ksi</strong></div>
             </div>
           </div>
         </article>
@@ -625,7 +634,7 @@
           <article class="card plot-card wide">
             <div class="card-header"><h2>Deflection Diagram</h2></div>
             <div class="plot">
-              <svg viewBox="0 0 900 210" role="img" aria-label="Placeholder deflection diagram">
+              <svg id="deflection-svg" viewBox="0 0 900 210" role="img" aria-label="Deflection diagram">
                 <g stroke="#d9e2ea" stroke-width="1">
                   <line x1="55" y1="30" x2="55" y2="170"/>
                   <line x1="55" y1="95" x2="865" y2="95"/>
@@ -653,24 +662,24 @@
           <div class="card-header"><h2>Pass / Fail Checks</h2></div>
           <div class="card-body">
             <div class="status-grid">
-              <div class="status">
+              <div class="status" id="bending-status">
                 <div class="status-line">
                   <strong>Bending</strong>
-                  <span class="badge">Pass</span>
+                  <span class="badge" id="bending-badge">Pass</span>
                 </div>
                 <div class="ratio">
-                  <span>Utilization <strong>17.96 / 30.00</strong></span>
-                  <strong>0.60</strong>
+                  <span>Utilization <strong id="bending-utilization-text">17.96 / 30.00</strong></span>
+                  <strong id="bending-utilization">0.60</strong>
                 </div>
               </div>
-              <div class="status">
+              <div class="status" id="deflection-status">
                 <div class="status-line">
                   <strong>Deflection</strong>
-                  <span class="badge">Pass</span>
+                  <span class="badge" id="deflection-badge">Pass</span>
                 </div>
                 <div class="ratio">
-                  <span>Utilization <strong>0.61 / 0.67</strong></span>
-                  <strong>0.91</strong>
+                  <span>Utilization <strong id="deflection-utilization-text">0.61 / 0.67</strong></span>
+                  <strong id="deflection-utilization">0.91</strong>
                 </div>
               </div>
             </div>
@@ -806,6 +815,91 @@
           vmaxLocation: vmaxSample.x,
           mmax: Math.abs(mmaxSample.moment),
           mmaxLocation: mmaxSample.x
+        };
+      },
+
+      calculateSectionProperties() {
+        const isSteel = document.querySelector('input[name="material"]:checked').value === "steel";
+        if (isSteel) {
+          const steelShapes = {
+            "W8x10": [30.8, 7.81, 10],
+            "W10x12": [53.8, 10.9, 12],
+            "W12x26": [204, 33.4, 26],
+            "W14x22": [199, 29.0, 22],
+            "W16x26": [301, 38.4, 26],
+            "W18x35": [510, 57.6, 35],
+            "W21x44": [843, 81.6, 44],
+            "W24x55": [1350, 114, 55]
+          };
+          const shape = document.getElementById("steel-shape").value;
+          const [I, S, weight] = steelShapes[shape];
+          return { I, S, weight, E: 29000, Fb: 30, material: "Steel", shape };
+        }
+
+        const lumberSizes = {
+          "2x8": [47.63, 13.14],
+          "2x10": [98.93, 21.39],
+          "2x12": [177.98, 31.64]
+        };
+        const shape = document.getElementById("lumber-size").value;
+        const [I, S] = lumberSizes[shape];
+        return { I, S, weight: null, E: 1600, Fb: 0.900, material: "Lumber", shape };
+      },
+
+      calculateDeflectionAndStress(result) {
+        const section = this.calculateSectionProperties();
+        const EI = section.E * section.I;
+        const spanInches = result.span * 12;
+        const dx = spanInches / 200;
+        let slope = 0;
+        let deflection = 0;
+        const deflectionSamples = [];
+
+        for (let i = 0; i <= 200; i++) {
+          const xFeet = result.span * i / 200;
+          const sample = result.samples[i];
+          const momentInches = sample.moment * 12;
+          const curvature = momentInches / EI;
+          deflectionSamples.push({ x: xFeet, curvature });
+        }
+
+        for (let i = 1; i <= 200; i++) {
+          const previous = deflectionSamples[i - 1];
+          const current = deflectionSamples[i];
+          const averageCurvature = (previous.curvature + current.curvature) / 2;
+          slope += averageCurvature * dx;
+          deflection += slope * dx;
+          current.deflection = deflection;
+        }
+        deflectionSamples[0].deflection = 0;
+
+        if (result.support === "simple") {
+          const endDeflection = deflectionSamples[200].deflection;
+          deflectionSamples.forEach((sample, i) => {
+            sample.deflection -= endDeflection * i / 200;
+          });
+        }
+
+        const ymaxSample = deflectionSamples.reduce((best, sample) =>
+          Math.abs(sample.deflection) > Math.abs(best.deflection) ? sample : best
+        );
+        const ymax = Math.abs(ymaxSample.deflection);
+        const deflectionLimit = spanInches / 360;
+        const bendingStress = Math.abs(result.mmax * 12) / section.S;
+        const bendingPass = bendingStress <= section.Fb;
+        const deflectionPass = ymax <= deflectionLimit;
+
+        return {
+          section,
+          samples: deflectionSamples,
+          ymax,
+          ymaxLocation: ymaxSample.x,
+          deflectionLimit,
+          bendingStress,
+          bendingPass,
+          deflectionPass,
+          bendingRatio: bendingStress / section.Fb,
+          deflectionRatio: ymax / deflectionLimit
         };
       },
 
@@ -997,6 +1091,75 @@
           <text x="${left-12}" y="${bottom}" text-anchor="end" font-size="11" fill="#667789">${this.format(-maxAbs)}</text>`;
       },
 
+      drawDeflection(samples, ymax, ymaxLocation, limit) {
+        const svg = document.getElementById("deflection-svg");
+        const left = 55;
+        const right = 865;
+        const top = 20;
+        const bottom = 170;
+        const centerY = 95;
+        const span = samples[samples.length - 1].x;
+        const maxAbs = Math.max(...samples.map((sample) => Math.abs(sample.deflection)), limit, 0.001);
+
+        const points = samples.map((sample) => {
+          const x = left + (right-left) * sample.x / span;
+          const y = centerY + (sample.deflection / maxAbs) * 55;
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(" ");
+
+        const labelX = left + (right-left) * ymaxLocation / span;
+        const labelY = centerY + (samples.reduce((best, sample) =>
+          Math.abs(sample.deflection) > Math.abs(best.deflection) ? sample : best
+        ).deflection / maxAbs) * 55;
+
+        svg.innerHTML = `
+          <g stroke="#d9e2ea" stroke-width="1">
+            <line x1="${left}" y1="${top}" x2="${left}" y2="${bottom}"/>
+            <line x1="${left}" y1="${centerY}" x2="${right}" y2="${centerY}"/>
+            <line x1="${right}" y1="${top}" x2="${right}" y2="${bottom}"/>
+          </g>
+          <g stroke="#667789" stroke-width="1">
+            <line x1="${left}" y1="${bottom}" x2="${right}" y2="${bottom}"/>
+            <line x1="${left}" y1="${bottom}" x2="${left}" y2="${bottom+6}"/>
+            <line x1="${left+(right-left)/2}" y1="${bottom}" x2="${left+(right-left)/2}" y2="${bottom+6}"/>
+            <line x1="${right}" y1="${bottom}" x2="${right}" y2="${bottom+6}"/>
+          </g>
+          <polyline points="${points}" fill="none" stroke="#2877b8" stroke-width="4"/>
+          <line x1="${labelX}" y1="${centerY}" x2="${labelX}" y2="${labelY}" stroke="#2877b8" stroke-dasharray="5 5"/>
+          <circle cx="${labelX}" cy="${labelY}" r="5" fill="#2877b8"/>
+          <text x="${left}" y="${bottom+20}" text-anchor="middle" font-size="12" fill="#667789">0 ft</text>
+          <text x="${left+(right-left)/2}" y="${bottom+20}" text-anchor="middle" font-size="12" fill="#667789">${this.format(span/2)} ft</text>
+          <text x="${right}" y="${bottom+20}" text-anchor="middle" font-size="12" fill="#667789">${this.format(span)} ft</text>
+          <text x="${labelX}" y="${Math.min(bottom-12, labelY+18)}" text-anchor="middle" font-size="13" font-weight="700" fill="#182534">ymax = ${this.format(ymax)} in</text>`;
+      },
+
+      updateSectionChecks(check) {
+        document.getElementById("ymax-value").textContent = `${this.format(check.ymax)} in`;
+        document.getElementById("ymax-location").textContent = ` at ${this.format(check.ymaxLocation)} ft`;
+        document.getElementById("deflection-limit-value").textContent = `${this.format(check.deflectionLimit)} in`;
+        document.getElementById("bending-stress-value").textContent = `${this.format(check.bendingStress)} ksi`;
+        document.getElementById("allowable-stress-value").textContent = `${this.format(check.section.Fb)} ksi`;
+
+        const bendingStatus = document.getElementById("bending-status");
+        const deflectionStatus = document.getElementById("deflection-status");
+        const bendingBadge = document.getElementById("bending-badge");
+        const deflectionBadge = document.getElementById("deflection-badge");
+
+        bendingBadge.textContent = check.bendingPass ? "Pass" : "Fail";
+        deflectionBadge.textContent = check.deflectionPass ? "Pass" : "Fail";
+        bendingStatus.classList.toggle("fail", !check.bendingPass);
+        deflectionStatus.classList.toggle("fail", !check.deflectionPass);
+
+        document.getElementById("bending-utilization-text").textContent =
+          `${this.format(check.bendingStress)} / ${this.format(check.section.Fb)}`;
+        document.getElementById("bending-utilization").textContent =
+          this.format(check.bendingRatio);
+        document.getElementById("deflection-utilization-text").textContent =
+          `${this.format(check.ymax)} / ${this.format(check.deflectionLimit)}`;
+        document.getElementById("deflection-utilization").textContent =
+          this.format(check.deflectionRatio);
+      },
+
       updateResults(result) {
         document.getElementById("ra-label").textContent = "RA";
         document.getElementById("ra-value").textContent = `${this.format(result.RA)} kip`;
@@ -1092,6 +1255,14 @@
           BeamDrawing.drawChart("shear-svg", result.samples, "shear", "Vmax", "kip");
           BeamDrawing.drawChart("moment-svg", result.samples, "moment", "Mmax", "kip-ft");
           BeamDrawing.updateResults(result);
+          const sectionCheck = BeamCalculations.calculateDeflectionAndStress(result);
+          BeamDrawing.drawDeflection(
+            sectionCheck.samples,
+            sectionCheck.ymax,
+            sectionCheck.ymaxLocation,
+            sectionCheck.deflectionLimit
+          );
+          BeamDrawing.updateSectionChecks(sectionCheck);
         }
       }
     }
